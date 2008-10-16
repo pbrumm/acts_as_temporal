@@ -16,6 +16,8 @@ ActiveRecord::Schema.define(:version => 0) do
     t.column :body, :text
     t.column :created_on, :datetime
     t.column :updated_on, :datetime
+    t.column :effective_start, :integer
+    t.column :effective_end, :integer
     t.column :author_id, :integer
     t.column :revisor_id, :integer
   end
@@ -40,6 +42,8 @@ ActiveRecord::Schema.define(:version => 0) do
     t.column :title, :string, :limit => 255
     t.column :body, :text
     t.column :version_type, :string, :limit => 255
+    t.column :effective_start, :integer
+    t.column :effective_end, :integer
     t.column :updated_at, :datetime
   end
   
@@ -55,6 +59,8 @@ ActiveRecord::Schema.define(:version => 0) do
   create_table :widget_versions, :force => true do |t|
     t.column :widget_id, :integer
     t.column :name, :string, :limit => 50
+    t.column :effective_start, :integer
+    t.column :effective_end, :integer
     t.column :version, :integer
     t.column :updated_at, :datetime
   end
@@ -74,9 +80,13 @@ ActiveRecord::Schema.define(:version => 0) do
     t.column :name, :string
     t.column :latitude, :float
     t.column :longitude, :float
+    t.column :effective_start, :integer
+    t.column :effective_end, :integer
     t.column :doesnt_trigger_version,:string
     t.column :version, :integer
   end
   
   add_index :landmark_versions, [:landmark_id, :version], :unique => true
+  
+
 end

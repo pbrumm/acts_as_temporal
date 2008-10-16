@@ -170,7 +170,7 @@ module ActiveRecord #:nodoc:
 
           cattr_accessor :versioned_class_name, :versioned_foreign_key, :versioned_table_name, :versioned_inheritance_column, 
             :version_column, :max_version_limit, :track_altered_attributes, :version_condition, :version_sequence_name, :non_versioned_columns,
-            :version_association_options, :version_if_changed
+            :version_association_options, :version_if_changed, :effective_start_column, :effective_end_column, :created_at_column
 
           self.versioned_class_name         = options[:class_name]  || "Version"
           self.versioned_foreign_key        = options[:foreign_key] || self.to_s.foreign_key
@@ -178,6 +178,9 @@ module ActiveRecord #:nodoc:
           self.versioned_inheritance_column = options[:inheritance_column] || "versioned_#{inheritance_column}"
           self.version_column               = options[:version_column]     || 'version'
           self.version_sequence_name        = options[:sequence_name]
+          self.created_at_column		        = options[:created_at_column] || "created_at"
+          self.effective_start_column       = options[:effective_start_column] || "effective_start"
+          self.effective_end_column         = options[:effective_end_column] || "effective_end"
           self.max_version_limit            = options[:limit].to_i
           self.version_condition            = options[:if] || true
           self.non_versioned_columns        = [self.primary_key, inheritance_column, self.version_column, 'lock_version', versioned_inheritance_column, 'created_at', 'created_on'] + options[:non_versioned_columns].to_a.map(&:to_s)
@@ -247,6 +250,11 @@ module ActiveRecord #:nodoc:
             def versions_count
               page.version
             end
+            
+            def at(time)
+            	time_int = time.to_i
+            	find :first, :conditions => ["#{original_class.effective_start_column} >= ? and #{original_class.effective_end_column} < ?", time_int,time_int]
+            end
           end
 
           versioned_class.cattr_accessor :original_class
@@ -273,7 +281,16 @@ module ActiveRecord #:nodoc:
             @saving_version = nil
             rev = self.class.versioned_class.new
             clone_versioned_model(self, rev)
-            rev.send("#{self.class.version_column}=", send(self.class.version_column))
+  					current_time = Time.now.to_i
+  					current_version = send(self.class.version_column)
+  					if current_version > 1
+  						self.connection.update("update #{self.versioned_table_name} set #{self.class.effective_end_column} = #{current_time} where #{self.class.versioned_foreign_key} = #{self.id} and #{self.class.version_column} = #{current_version - 1}" )
+  					end
+  					rev.send("#{self.class.effective_start_column}=", current_time) if rev.has_attribute?(self.class.effective_start_column)
+  				#	rev.effective_start = current_time
+  					rev.send("#{self.class.effective_end_column}=", 2147483647) if rev.has_attribute?(self.class.effective_end_column)
+          #  rev.effective_end = 2147483647
+  					rev.send("#{self.class.version_column}=", send(self.class.version_column))
             rev.send("#{self.class.versioned_foreign_key}=", id)
             rev.save
           end
@@ -406,6 +423,7 @@ module ActiveRecord #:nodoc:
           # Rake migration task to create the versioned table using options passed to acts_as_versioned
           def create_versioned_table(create_table_options = {})
             # create version column in main table if it does not exist
+            return if !connection.tables.include?(table_name.to_s)
             if !self.content_columns.find { |c| [version_column.to_s, 'lock_version'].include? c.name }
               self.connection.add_column table_name, version_column, :integer
               self.reset_column_information
@@ -416,6 +434,8 @@ module ActiveRecord #:nodoc:
             self.connection.create_table(versioned_table_name, create_table_options) do |t|
               t.column versioned_foreign_key, :integer
               t.column version_column, :integer
+              t.column effective_start_column, :integer
+              t.column effective_end_column, :integer, :null => true
             end
 
             updated_col = nil
@@ -440,7 +460,7 @@ module ActiveRecord #:nodoc:
               self.connection.add_column versioned_table_name, :updated_at, :timestamp
             end
             
-            self.connection.create_index versioned_table_name, versioned_foreign_key
+            #self.connection.create_index versioned_table_name, versioned_foreign_key
           end
 
           # Rake migration task to drop the versioned table
