@@ -253,7 +253,7 @@ module ActiveRecord #:nodoc:
             
             def at(time)
             	time_int = time.to_i
-            	find :first, :conditions => ["#{original_class.effective_start_column} >= ? and #{original_class.effective_end_column} < ?", time_int,time_int]
+            	find :first, :conditions => ["#{original_class.versioned_foreign_key} = ? AND #{original_class.effective_start_column} >= ? and #{original_class.effective_end_column} < ?", self.send(original_class.versioned_foreign_key), time_int, time_int]
             end
           end
 
@@ -281,15 +281,17 @@ module ActiveRecord #:nodoc:
             @saving_version = nil
             rev = self.class.versioned_class.new
             clone_versioned_model(self, rev)
+            # using the time as an integer as it is easier searched in db.  especially sqlite
   					current_time = Time.now.to_i
   					current_version = send(self.class.version_column)
+  					# update previous version end time to now.  
   					if current_version > 1
   						self.connection.update("update #{self.versioned_table_name} set #{self.class.effective_end_column} = #{current_time} where #{self.class.versioned_foreign_key} = #{self.id} and #{self.class.version_column} = #{current_version - 1}" )
   					end
+  					#settung effective_start column is current time.  need to fix so that it is update time so historical times can be set
   					rev.send("#{self.class.effective_start_column}=", current_time) if rev.has_attribute?(self.class.effective_start_column)
-  				#	rev.effective_start = current_time
+  					# setting effective_end column to max int ~ year 2038.  This allows consistent between queries.  
   					rev.send("#{self.class.effective_end_column}=", 2147483647) if rev.has_attribute?(self.class.effective_end_column)
-          #  rev.effective_end = 2147483647
   					rev.send("#{self.class.version_column}=", send(self.class.version_column))
             rev.send("#{self.class.versioned_foreign_key}=", id)
             rev.save
