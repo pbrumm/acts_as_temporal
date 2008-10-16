@@ -30,7 +30,7 @@ module ActiveRecord #:nodoc:
     #
     #   class Page < ActiveRecord::Base
     #     # assumes pages_versions table
-    #     acts_as_versioned
+    #     acts_as_temporal
     #   end
     #
     # Example:
@@ -64,8 +64,8 @@ module ActiveRecord #:nodoc:
     #   version.previous # go back one version
     #   version.next     # go forward one version
     #
-    # See ActiveRecord::Acts::Versioned::ClassMethods#acts_as_versioned for configuration options
-    module Versioned
+    # See ActiveRecord::Acts::Temporal::ClassMethods#acts_as_temporal for configuration options
+    module Temporal
       CALLBACKS = [:set_new_version, :save_version, :save_version?]
       def self.included(base) # :nodoc:
         base.extend ClassMethods
@@ -84,7 +84,7 @@ module ActiveRecord #:nodoc:
         # * <tt>if</tt> - symbol of method to check before saving a new version.  If this method returns false, a new version is not saved.
         #   For finer control, pass either a Proc or modify Model#version_condition_met?
         #
-        #     acts_as_versioned :if => Proc.new { |auction| !auction.expired? }
+        #     acts_as_temporal :if => Proc.new { |auction| !auction.expired? }
         #
         #   or...
         #
@@ -101,7 +101,7 @@ module ActiveRecord #:nodoc:
         #   to create an anonymous mixin:
         #
         #     class Auction
-        #       acts_as_versioned do
+        #       acts_as_temporal do
         #         def started?
         #           !started_at.nil?
         #         end
@@ -116,7 +116,7 @@ module ActiveRecord #:nodoc:
         #       end
         #     end
         #     class Auction
-        #       acts_as_versioned :extend => AuctionExtension
+        #       acts_as_temporal :extend => AuctionExtension
         #     end
         #
         #  Example code:
@@ -134,7 +134,7 @@ module ActiveRecord #:nodoc:
         # A lock_version field is also accepted if your model uses Optimistic Locking.  If your table uses Single Table inheritance,
         # then that field is reflected in the versioned model as 'versioned_type' by default.
         #
-        # Acts_as_versioned comes prepared with the ActiveRecord::Acts::Versioned::ActMethods::ClassMethods#create_versioned_table 
+        # Acts_as_versioned comes prepared with the ActiveRecord::Acts::Temporal::ActMethods::ClassMethods#create_versioned_table 
         # method, perfect for a migration.  It will also create the version column if the main model does not already have it.
         #
         #   class AddVersions < ActiveRecord::Migration
@@ -149,28 +149,28 @@ module ActiveRecord #:nodoc:
         #     end
         #   end
         # 
-        # == Changing What Fields Are Versioned
+        # == Changing What Fields Are Temporal
         #
-        # By default, acts_as_versioned will version all but these fields: 
+        # By default, acts_as_temporal will version all but these fields: 
         # 
         #   [self.primary_key, inheritance_column, 'version', 'lock_version', versioned_inheritance_column]
         #
         # You can add or change those by modifying #non_versioned_columns.  Note that this takes strings and not symbols.
         #
         #   class Post < ActiveRecord::Base
-        #     acts_as_versioned
+        #     acts_as_temporal
         #     self.non_versioned_columns << 'comments_count'
         #   end
         # 
-        def acts_as_versioned(options = {}, &extension)
+        def acts_as_temporal(options = {}, &extension)
           # don't allow multiple calls
-          return if self.included_modules.include?(ActiveRecord::Acts::Versioned::ActMethods)
+          return if self.included_modules.include?(ActiveRecord::Acts::Temporal::ActMethods)
 
-          send :include, ActiveRecord::Acts::Versioned::ActMethods
+          send :include, ActiveRecord::Acts::Temporal::ActMethods
 
           cattr_accessor :versioned_class_name, :versioned_foreign_key, :versioned_table_name, :versioned_inheritance_column, 
             :version_column, :max_version_limit, :track_altered_attributes, :version_condition, :version_sequence_name, :non_versioned_columns,
-            :version_association_options, :version_if_changed, :effective_start_column, :effective_end_column, :created_at_column
+            :version_association_options, :version_if_changed, :effective_start_column, :effective_end_column
 
           self.versioned_class_name         = options[:class_name]  || "Version"
           self.versioned_foreign_key        = options[:foreign_key] || self.to_s.foreign_key
@@ -178,7 +178,6 @@ module ActiveRecord #:nodoc:
           self.versioned_inheritance_column = options[:inheritance_column] || "versioned_#{inheritance_column}"
           self.version_column               = options[:version_column]     || 'version'
           self.version_sequence_name        = options[:sequence_name]
-          self.created_at_column		        = options[:created_at_column] || "created_at"
           self.effective_start_column       = options[:effective_start_column] || "effective_start"
           self.effective_end_column         = options[:effective_end_column] || "effective_end"
           self.max_version_limit            = options[:limit].to_i
@@ -251,6 +250,7 @@ module ActiveRecord #:nodoc:
               page.version
             end
             
+            
             def at(time)
             	time_int = time.to_i if time.kind_of?(Time)
             	time_int = time if time.kind_of?(Integer)
@@ -278,6 +278,9 @@ module ActiveRecord #:nodoc:
           base.extend ClassMethods
         end
 
+				def override_estimated_start
+					Time.now
+				end
         # Saves a version of the model in the versioned table.  This is called in the after_save callback by default
         def save_version
           if @saving_version
@@ -285,7 +288,7 @@ module ActiveRecord #:nodoc:
             rev = self.class.versioned_class.new
             clone_versioned_model(self, rev)
             # using the time as an integer as it is easier searched in db.  especially sqlite
-  					current_time = Time.now.to_i
+  					current_time = override_estimated_start().to_i
   					current_version = send(self.class.version_column)
   					# update previous version end time to now.  
   					if current_version > 1
@@ -301,7 +304,7 @@ module ActiveRecord #:nodoc:
           end
         end
 
-        # Clears old revisions if a limit is set with the :limit option in <tt>acts_as_versioned</tt>.
+        # Clears old revisions if a limit is set with the :limit option in <tt>acts_as_temporal</tt>.
         # Override this method to set your own criteria for clearing old versions.
         def clear_old_versions
           return if self.class.max_version_limit == 0
@@ -425,7 +428,7 @@ module ActiveRecord #:nodoc:
             const_get versioned_class_name
           end
 
-          # Rake migration task to create the versioned table using options passed to acts_as_versioned
+          # Rake migration task to create the versioned table using options passed to acts_as_temporal
           def create_versioned_table(create_table_options = {})
             # create version column in main table if it does not exist
             return if !connection.tables.include?(table_name.to_s)
@@ -514,4 +517,4 @@ module ActiveRecord #:nodoc:
   end
 end
 
-ActiveRecord::Base.send :include, ActiveRecord::Acts::Versioned
+ActiveRecord::Base.send :include, ActiveRecord::Acts::Temporal

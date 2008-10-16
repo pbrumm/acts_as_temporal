@@ -3,7 +3,7 @@ class Page < ActiveRecord::Base
   has_many   :authors,  :through => :versions, :order => 'name'
   belongs_to :revisor,  :class_name => 'Author'
   has_many   :revisors, :class_name => 'Author', :through => :versions, :order => 'name'
-  acts_as_versioned :if => :feeling_good? do
+  acts_as_temporal :if => :feeling_good? do
     def self.included(base)
       base.cattr_accessor :feeling_good
       base.feeling_good = true
@@ -24,7 +24,7 @@ module LockedPageExtension
 end
 
 class LockedPage < ActiveRecord::Base
-  acts_as_versioned \
+  acts_as_temporal \
     :inheritance_column => :version_type, 
     :foreign_key        => :page_id, 
     :table_name         => :locked_pages_revisions, 

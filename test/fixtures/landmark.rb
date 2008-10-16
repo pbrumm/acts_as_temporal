@@ -1,3 +1,3 @@
 class Landmark < ActiveRecord::Base
-  acts_as_versioned :if_changed => [ :name, :longitude, :latitude ]
+  acts_as_temporal :if_changed => [ :name, :longitude, :latitude ]
 end

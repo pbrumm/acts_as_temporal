@@ -3,7 +3,7 @@ require File.join(File.dirname(__FILE__), 'abstract_unit')
 if ActiveRecord::Base.connection.supports_migrations? 
   class Thing < ActiveRecord::Base
     attr_accessor :version
-    acts_as_versioned
+    acts_as_temporal
   end
 
   class MigrationTest < Test::Unit::TestCase

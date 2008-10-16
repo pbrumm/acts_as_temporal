@@ -6,12 +6,12 @@ require 'rake/gempackagetask'
 require 'rake/testtask'
 require 'rake/contrib/rubyforgepublisher'
 
-PKG_NAME           = 'acts_as_versioned'
-PKG_VERSION        = '0.3.1'
+PKG_NAME           = 'acts_as_temporal'
+PKG_VERSION        = '0.0.1'
 PKG_FILE_NAME      = "#{PKG_NAME}-#{PKG_VERSION}"
-PROD_HOST          = "technoweenie@bidwell.textdrive.com"
-RUBY_FORGE_PROJECT = 'ar-versioned'
-RUBY_FORGE_USER    = 'technoweenie'
+PROD_HOST          = "temporal@petebrumm.com"
+RUBY_FORGE_PROJECT = 'ar-temporal'
+RUBY_FORGE_USER    = 'pbrumm'
 
 desc 'Default: run unit tests.'
 task :default => :test
@@ -38,18 +38,18 @@ spec = Gem::Specification.new do |s|
   s.platform        = Gem::Platform::RUBY
   s.summary         = "Simple versioning with active record models"
   s.files           = FileList["{lib,test}/**/*"].to_a + %w(README MIT-LICENSE CHANGELOG RUNNING_UNIT_TESTS)
-  s.files.delete      "acts_as_versioned_plugin.sqlite.db"
-  s.files.delete      "acts_as_versioned_plugin.sqlite3.db"
+  s.files.delete      "acts_as_temporal_plugin.sqlite.db"
+  s.files.delete      "acts_as_temporal_plugin.sqlite3.db"
   s.files.delete      "test/debug.log"
   s.require_path    = 'lib'
-  s.autorequire     = 'acts_as_versioned'
+  s.autorequire     = 'acts_as_temporal'
   s.has_rdoc        = true
   s.test_files      = Dir['test/**/*_test.rb']
   s.add_dependency    'activerecord', '>= 1.10.1'
   s.add_dependency    'activesupport', '>= 1.1.1'
-  s.author          = "Rick Olson"
-  s.email           = "technoweenie@gmail.com"
-  s.homepage        = "http://techno-weenie.net"
+  s.author          = "Pete Brumm"
+  s.email           = "temporal@petebrumm.com"
+#  s.homepage        = "http://techno-weenie.net"
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
