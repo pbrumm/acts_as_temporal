@@ -4,33 +4,55 @@ It stores the effective_start and effective_end dates of records so that the ver
 
 Below is the details for acts_as_versioned which still works today.
 
-Will soon rename methods to get them more inline with the temporal nature of things.
 
-= acts_as_versioned
+
+= acts_as_temporal
 
 This library adds simple versioning to an ActiveRecord module.  ActiveRecord is required.
+as well as temporal capabilities
 
+It will set timestamps for the effectivity of a record.
+
+on initial create the versioned record
+
+  the effective_start field will be set to current time or to whatever effective_date method is set to.
+	the effective_end field will be set to max integer which is some time in the year 2038  (another y2k but waiting to happen)
+	
+on update the versioned record
+	
+	the previous version record's effective_end field will be set to the current time or to whatever effective_date method is set to.
+	the new versioned record will act like the initial create
+	
+
+It turns all fields into integers for easier quering 
+
+This can be converted by 
+Time.at(1221627600)
+and back with 
+Time.now.to_i
+
+version | effective_start | effective_end
+1       | 1221627600      | 1222405201
+2       | 1222405201      | 2147483202
+
+
+so this allows you to write a between query on the version table to find what the state was at a point in time.
+
+VersionedModel.find(:all, :conditions => ["effective_start <= ? AND effective_end > ?", point_in_time, point_in_time])
+
+
+the model looks the same as acts_as_versioned except I added the following
+
+  t.column effective_start, :integer
+  t.column effective_end, :integer
+  
+  
 == Resources
 
 Install
 
-* gem install acts_as_versioned
+* ./script/plugin install git://github.com/pbrumm/acts_as_temporal.git/
 
-Rubyforge project
+More details on approach
 
-* http://rubyforge.org/projects/ar-versioned
-
-RDocs
-
-* http://ar-versioned.rubyforge.org
-
-Subversion
-
-* http://techno-weenie.net/svn/projects/acts_as_versioned
-
-Collaboa
-
-* http://collaboa.techno-weenie.net/repository/browse/acts_as_versioned
-
-Special thanks to Dreamer on ##rubyonrails for help in early testing.  His ServerSideWiki (http://serversidewiki.com) 
-was the first project to use acts_as_versioned <em>in the wild</em>.
+http://en.wikipedia.org/wiki/Temporal_database
