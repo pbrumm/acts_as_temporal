@@ -253,9 +253,9 @@ module ActiveRecord #:nodoc:
             end
             
             
-            def at(time)
-            	time_int = time.to_i if time.kind_of?(Time)
-            	time_int = time if time.kind_of?(Integer)
+            def at(timestamp)
+            	time_int = timestamp.to_i if timestamp.kind_of?(Time)
+            	time_int = timestamp.to_time if timestamp.kind_of?(Date)
             	if time_int
             		find :first, :conditions => ["#{original_class.versioned_foreign_key} = ? AND #{original_class.effective_start_column} >= ? and #{original_class.effective_end_column} < ?", self.send(original_class.versioned_foreign_key), time_int, time_int]
 							end
@@ -295,18 +295,18 @@ module ActiveRecord #:nodoc:
   						if self.has_attribute?(self.class.updated_at_column)
   							current_time = send(self.class.updated_at_column)
   							if current_time.kind_of?(Date) 
-  								current_time = time.to_time.to_i 
+  								current_time = current_time.to_time.to_i 
   							else
-  								current_time = time.to_i if time.kind_of?(Time)
+  								current_time = current_time.to_i if current_time.kind_of?(Time)
   							end
   						end
   					else
   						if self.has_attribute?(self.class.created_at_column)
   							current_time = send(self.class.created_at_column)
   							if current_time.kind_of?(Date) 
-  								current_time = time.to_time.to_i 
+  								current_time = current_time.to_time.to_i 
   							else
-  								current_time = time.to_i if time.kind_of?(Time)
+  								current_time = current_time.to_i if current_time.kind_of?(Time)
   							end
   						end
   					end
